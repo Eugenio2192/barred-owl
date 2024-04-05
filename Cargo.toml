@@ -5,5 +5,5 @@ authors = ["Eugenio Salvador Arellano Ruiz <euarellano2192@gmail.com"]
 description = "Ontology visualisation library"
 
 [dependencies]
-horned-owl = "0.14.0"
+horned-owl = { git = "https://github.com/phillord/horned-owl.git", branch = "devel" }
 layout-rs = "0.1.2"
