@@ -1,12 +1,11 @@
-
 extern crate horned_owl;
 extern crate petgraph;
 
-use std::collections::{hash_map::Entry, HashMap};
+use horned_owl::model::ForIRI;
 use horned_owl::model::*;
 use horned_owl::visitor::Visit;
-use horned_owl::model::ForIRI;
 use petgraph::graph::{Graph, NodeIndex};
+use std::collections::{hash_map::Entry, HashMap};
 
 const RDFSLABEL: &str = "http://www.w3.org/2000/01/rdf-schema#label";
 
@@ -15,44 +14,55 @@ pub trait RenderOnt<A: ForIRI> {
 }
 
 #[derive(Debug)]
-pub struct TaxonomyGraph<I> where 
-    I: ForIRI {
+pub struct TaxonomyGraph<I>
+where
+    I: ForIRI,
+{
     nodes: Vec<I>,
-    edges: Vec<(I,I)>,
-    map: HashMap<I,String>
-    
+    edges: Vec<(I, I)>,
+    map: HashMap<I, String>,
 }
 
-impl<I> Default for TaxonomyGraph<I> where
-    I: ForIRI {
+impl<I> Default for TaxonomyGraph<I>
+where
+    I: ForIRI,
+{
     fn default() -> Self {
-        TaxonomyGraph { nodes: vec![], edges: vec![], map: HashMap::<I,String>::new()}
-}
+        TaxonomyGraph {
+            nodes: vec![],
+            edges: vec![],
+            map: HashMap::<I, String>::new(),
+        }
+    }
 }
 
-impl<I> TaxonomyGraph<I> where 
-    I: ForIRI {
-    pub fn into_graph(&self) -> Graph<String,()> {
+impl<I> TaxonomyGraph<I>
+where
+    I: ForIRI,
+{
+    pub fn into_graph(&self) -> Graph<String, ()> {
         let mut graph = Graph::<String, ()>::new();
-        let mut node_ix = HashMap::<String,NodeIndex>::new();
+        let mut node_ix = HashMap::<String, NodeIndex>::new();
         for n in &self.nodes {
             let name: String = match self.map.get(n.as_ref()) {
                 Some(nn) => nn.clone(),
-                None => n.as_ref().into()
+                None => n.as_ref().into(),
             };
             match node_ix.entry(name.clone()) {
                 Entry::Occupied(_) => (),
-                Entry::Vacant(v) => {v.insert(graph.add_node(name.clone()));}
+                Entry::Vacant(v) => {
+                    v.insert(graph.add_node(name.clone()));
+                }
             };
         }
         for (a, b) in &self.edges {
             let a_name: String = match self.map.get(a.as_ref()) {
                 Some(nn) => nn.clone(),
-                None => a.as_ref().into()
+                None => a.as_ref().into(),
             };
             let b_name: String = match self.map.get(b.as_ref()) {
                 Some(nn) => nn.clone(),
-                None => b.as_ref().into()
+                None => b.as_ref().into(),
             };
             let left = node_ix.get(&a_name).unwrap();
             let right = node_ix.get(&b_name).unwrap();
@@ -62,32 +72,28 @@ impl<I> TaxonomyGraph<I> where
     }
 }
 
-impl<I: ForIRI> Visit<I> for TaxonomyGraph<I>{
+impl<I: ForIRI> Visit<I> for TaxonomyGraph<I> {
     fn visit_class(&mut self, class: &Class<I>) {
         self.nodes.push(class.0.underlying());
-        // let key = class.try_into().unwrap();
-        // match self.map.entry(key) {
-            // Entry::Occupied(o) => (),
-            // Entry::Vacant(v) => {v.insert(None);}
-        // };
     }
 
     fn visit_sub_class_of(&mut self, ex: &SubClassOf<I>) {
-        
         let sup = &ex.sup;
         let sup_class = match sup {
             ClassExpression::Class(e) => Some(e),
-            _ => None
+            _ => None,
         };
         let sub = &ex.sub;
         let sub_class = match sub {
             ClassExpression::Class(e) => Some(e),
-            _ => None
+            _ => None,
         };
         if sup_class.is_some() & sub_class.is_some() {
-            self.edges.push((sup_class.unwrap().0.underlying(), sub_class.unwrap().0.underlying()))
+            self.edges.push((
+                sup_class.unwrap().0.underlying(),
+                sub_class.unwrap().0.underlying(),
+            ))
         }
- 
     }
 
     fn visit_annotation_assertion(&mut self, aa: &AnnotationAssertion<I>) {
@@ -95,30 +101,31 @@ impl<I: ForIRI> Visit<I> for TaxonomyGraph<I>{
             match &aa.subject {
                 AnnotationSubject::IRI(iri) => {
                     let literal = match &aa.ann.av {
-                        AnnotationValue::Literal(l) =>  Some(l.literal()),
-                        _ => None
+                        AnnotationValue::Literal(l) => Some(l.literal()),
+                        _ => None,
                     };
                     if literal.is_some() {
                         match self.map.entry(iri.underlying()) {
                             Entry::Occupied(_) => (),
-                            Entry::Vacant(v) => {v.insert(literal.unwrap().clone().into());}
+                            Entry::Vacant(v) => {
+                                v.insert(literal.unwrap().clone().into());
+                            }
                         };
                     }
-                },
-                _ => ()
+                }
+                _ => (),
             }
         }
-
     }
 }
 #[cfg(test)]
 mod test {
+    use super::*;
     use horned_owl::io::owx::reader::read_with_build;
     use horned_owl::model::Build;
     use horned_owl::ontology::set::SetOntology;
     use horned_owl::visitor::Walk;
-    use petgraph::dot::{Dot, Config};
-    use super::*;
+    use petgraph::dot::{Config, Dot};
 
     use std::io::BufRead;
 
@@ -130,22 +137,20 @@ mod test {
         o
     }
 
-
     #[test]
     fn test_graph_building() {
-        let mut  tax: TaxonomyGraph<String> = TaxonomyGraph::default();
-        let a_node: String ="a".into(); 
+        let mut tax: TaxonomyGraph<String> = TaxonomyGraph::default();
+        let a_node: String = "a".into();
         let b_node: String = "b".into();
         tax.nodes.push(a_node.clone());
         tax.nodes.push(b_node.clone());
         tax.edges.push((a_node, b_node));
-        let a_node: String ="a".into(); 
+        let a_node: String = "a".into();
         let b_node: String = "b".into();
         tax.map.insert(a_node, "a".into());
         tax.map.insert(b_node, "b".into());
         let g = tax.into_graph();
         println!("{:?}", g);
-
     }
 
     #[test]
@@ -155,7 +160,10 @@ mod test {
 
         let mut walk: Walk<String, TaxonomyGraph<String>> = Walk::new(TaxonomyGraph::default());
         walk.set_ontology(&ont);
-        println!("{:?}", Dot::with_config(&walk.into_visit().into_graph(), &[Config::EdgeNoLabel]));
+        println!(
+            "{:?}",
+            Dot::with_config(&walk.into_visit().into_graph(), &[Config::EdgeNoLabel])
+        );
         assert!(true);
     }
 }
