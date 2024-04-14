@@ -40,7 +40,10 @@ impl<I> TaxonomyGraph<I> where
                 Some(nn) => nn.clone(),
                 None => n.as_ref().into()
             };
-            node_ix.insert(name.clone(), graph.add_node(name.clone()));
+            match node_ix.entry(name.clone()) {
+                Entry::Occupied(_) => (),
+                Entry::Vacant(v) => {v.insert(graph.add_node(name.clone()));}
+            };
         }
         for (a, b) in &self.edges {
             let a_name: String = match self.map.get(a.as_ref()) {
@@ -146,18 +149,12 @@ mod test {
     }
 
     #[test]
-    fn single_class() {
+    fn build_graph() {
         let ont_s = include_str!("../tmp/bfo.owx");
         let ont = read_ok(&mut ont_s.as_bytes());
 
         let mut walk: Walk<String, TaxonomyGraph<String>> = Walk::new(TaxonomyGraph::default());
         walk.set_ontology(&ont);
-        // let v = walk.into_visit().edges.into_iter();
-        
-        // println!("{:?}", walk.into_visit().map)
-        // for val in v {
-        //     println!("{:?}", val);
-        // }
         println!("{:?}", Dot::with_config(&walk.into_visit().into_graph(), &[Config::EdgeNoLabel]));
         assert!(true);
     }
