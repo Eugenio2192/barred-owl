@@ -154,7 +154,7 @@ mod test {
 
     #[test]
     fn build_graph() {
-        let ont_s = include_str!("../tmp/bfo.owx");
+        let ont_s = include_str!("ontology/bfo.owx");
         let ont = read_ok(&mut ont_s.as_bytes());
 
         let mut walk: Walk<String, TaxonomyGraph<String>> = Walk::new(TaxonomyGraph::default());
