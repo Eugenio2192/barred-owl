@@ -4,10 +4,9 @@ extern crate petgraph;
 use horned_owl::model::ForIRI;
 use horned_owl::model::*;
 use horned_owl::visitor::Visit;
+use horned_owl::vocab::RDFS;
 use petgraph::graph::{Graph, NodeIndex};
 use std::collections::{hash_map::Entry, HashMap};
-
-const RDFSLABEL: &str = "http://www.w3.org/2000/01/rdf-schema#label";
 
 pub trait RenderOnt<A: ForIRI> {
     fn render_ontology(&mut self) {}
@@ -97,7 +96,7 @@ impl<I: ForIRI> Visit<I> for TaxonomyGraph<I> {
     }
 
     fn visit_annotation_assertion(&mut self, aa: &AnnotationAssertion<I>) {
-        if aa.ann.ap.0.as_ref() == RDFSLABEL {
+        if aa.ann.ap.0.as_ref() == RDFS::Label.as_ref() {
             match &aa.subject {
                 AnnotationSubject::IRI(iri) => {
                     let literal = match &aa.ann.av {
