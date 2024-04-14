@@ -9,33 +9,35 @@ use horned_owl::model::*;
 use horned_owl::visitor::Visit;
 use horned_owl::model::ForIRI;
 use petgraph::graph::{Graph, NodeIndex};
-use std::io::Write;
 use std::hash::Hash;
 
 pub trait RenderOnt<A: ForIRI> {
     fn render_ontology(&mut self) {}
 }
 
-pub struct TaxonomyGraph<A> where A: Default + Eq + PartialEq + Hash + Copy {
-    nodes: Vec<A>,
-    edges: Vec<(A,A)>,
-    map: HashMap<String,Option<A>>
+pub struct TaxonomyGraph<A,I> where A: Default + Eq + PartialEq + Hash + Copy, I: ForIRI {
+    nodes: Vec<I>,
+    edges: Vec<(I,I)>,
+    map: HashMap<I,Option<A>>
     
 }
-// pub struct RLOntologyFilter(ComponentMappedOntology);
-impl<A> Default for TaxonomyGraph<A> where A: Default + Eq + PartialEq + Hash + Copy {
+
+impl<A,I> Default for TaxonomyGraph<A,I> where
+     A: Default + Eq + PartialEq + Hash + Copy,
+     I: ForIRI {
     fn default() -> Self {
         TaxonomyGraph { nodes: vec![], edges: vec![], map: HashMap::new()}
 }
 }
 
-impl<A> TaxonomyGraph<A> where 
-A: Default + Eq + PartialEq + Hash + Copy {
+impl<A,I> TaxonomyGraph<A,I> where 
+A: Default + Eq + PartialEq + Hash + Copy, I: ForIRI {
     pub fn into_graph(&self) -> Graph<A,()> {
         let mut graph = Graph::<A, ()>::new();
         let mut node_ix = HashMap::<A,NodeIndex>::new();
         for n in &self.nodes {
-            node_ix.insert(*n, graph.add_node(*n));
+            let name = self.map.get(n).unwrap().unwrap();
+            node_ix.insert(name, graph.add_node(name));
         }
         for (a, b) in &self.edges {
             let left = node_ix.get(a).unwrap();
@@ -46,8 +48,9 @@ A: Default + Eq + PartialEq + Hash + Copy {
     }
 }
 
-impl<I: ForIRI, A: Default + Eq + PartialEq + Hash + Copy> Visit<I> for TaxonomyGraph<A>{
+impl<I: ForIRI, A: Default + Eq + PartialEq + Hash + Copy> Visit<I> for TaxonomyGraph<A,I>{
     fn visit_class(&mut self, class: &Class<I>) {
+        self.nodes.push(class.into());
         let key = class.try_into().unwrap();
         match self.map.entry(key) {
             Entry::Occupied(o) => (),
@@ -55,7 +58,21 @@ impl<I: ForIRI, A: Default + Eq + PartialEq + Hash + Copy> Visit<I> for Taxonomy
         };
     }
 
-    fn visit_annotated_component(&mut self, _: &AnnotatedComponent<I>) {
+    fn visit_sub_class_of(&mut self, ex: &SubClassOf<I>) {
+        
+        let sup = &ex.sup;
+        let sup_class = match sup {
+            ClassExpression::Class(e) => Some(e),
+            _ => None
+        };
+        let sub = &ex.sub;
+        let sub_class = match sub {
+            ClassExpression::Class(e) => Some(e),
+            _ => None
+        };
+        if sup_class.is_some() & sub_class.is_some() {
+            
+        }
         
     }
 }
@@ -80,12 +97,14 @@ mod test {
 
     #[test]
     fn test_graph_building() {
-        let mut  tax: TaxonomyGraph<&str> = TaxonomyGraph::default();
-        tax.nodes.push("a");
-        tax.nodes.push("b");
-        tax.edges.push(("a", "b"));
-        tax.map.insert("iri:a".into(), Some("a"));
-        tax.map.insert("iri:b".into(), Some("b"));
+        let mut  tax: TaxonomyGraph<&str,String> = TaxonomyGraph::default();
+        let a_node ="a".into(); 
+        let b_node = "b".into();
+        tax.nodes.push(a_node);
+        tax.nodes.push(b_node);
+        tax.edges.push((a_node, b_node));
+        tax.map.insert(a_node, Some("a"));
+        tax.map.insert(b_node, Some("b"));
         let g = tax.into_graph();
         println!("{:?}", g);
 
