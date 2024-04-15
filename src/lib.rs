@@ -153,7 +153,7 @@ mod test {
     }
 
     #[test]
-    fn build_graph() {
+    fn test_dot_rendering() {
         let ont_s = include_str!("ontology/bfo.owx");
         let ont = read_ok(&mut ont_s.as_bytes());
 
